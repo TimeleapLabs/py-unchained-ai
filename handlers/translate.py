@@ -2,7 +2,7 @@
 import sys
 
 from transformers import pipeline
-from ..lib.sia import Sia
+from lib.sia import Sia
 
 loaded_models = {}
 

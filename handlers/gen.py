@@ -4,8 +4,8 @@ import io
 import os
 
 from diffusers import DiffusionPipeline
-from ..lib.sia import Sia
-from ..lib.torch_device import get_device
+from lib.sia import Sia
+from lib.torch_device import get_device
 
 pipelines = {}
 

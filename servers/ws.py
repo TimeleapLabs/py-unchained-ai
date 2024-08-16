@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
 import asyncio
-import warnings
 
 from websockets.server import serve
-from ..handlers.translate import translate
-from ..lib.sia import Sia
-from ..handlers.gen import gen
+from lib.sia import Sia
+
+from handlers.translate import request_handler as translate
+from handlers.gen import request_handler as gen
 
 # Ignore all warnings
-warnings.filterwarnings("ignore")
 
 
 def makeError(uuid, code):

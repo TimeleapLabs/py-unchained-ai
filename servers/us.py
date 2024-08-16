@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 
 import asyncio
-import warnings
-import socket
 import os
 
-from ..handlers.translate import translate
-from ..lib.sia import Sia
-from ..handlers.gen import gen
+from lib.sia import Sia
 
-# Ignore all warnings
-warnings.filterwarnings("ignore")
+from handlers.translate import request_handler as translate
+from handlers.gen import request_handler as gen
 
 
 def makeError(uuid, code):
@@ -73,6 +69,8 @@ async def main(socket_file="/tmp/unchained_ai.sock"):
 
     async with server:
         await asyncio.Future()  # Run forever
+
+    print("Server stopped")
 
 
 if __name__ == "__main__":

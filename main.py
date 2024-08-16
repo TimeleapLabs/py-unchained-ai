@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
 import argparse
+import warnings
+import asyncio
 
-from .servers.ws import main as ws_main
-from .servers.us import main as us_main
+warnings.filterwarnings("ignore")
+
+from servers.ws import main as ws_main
+from servers.us import main as us_main
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(
         prog='unchained-ai',
         description='Unchained AI Plugin Command-Line Interface')
@@ -29,12 +33,12 @@ def main():
 
     # Call the appropriate function based on the command
     if args.command == 'ws':
-        ws_main(args.port)
+       await ws_main(args.port)
     elif args.command == 'us':
-        us_main(args.file)
+       await us_main(args.file)
     else:
         parser.print_help()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
