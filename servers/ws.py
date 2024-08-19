@@ -12,26 +12,29 @@ from handlers.gen import request_handler as gen
 
 
 def makeError(uuid, code):
-    return Sia().add_byte_array_n(uuid).add_uint64(code).content
+    return Sia().add_byte_array8(uuid).add_uint64(code).add_byte_array32([]).content
 
 
-async def handle_ai(uuid, opcode, sia):
-    if opcode == 0:
-        return gen.request_handler(uuid, sia)
-    elif opcode == 1:
-        return translate.request_handler(uuid, sia)
+async def handle_ai(uuid, method, sia):
+    if method == "Unchained.AI.TextToImage":
+        return gen(uuid, sia)
+    elif method == "Unchained.AI.Translate":
+        return translate(uuid, sia)
     else:
         raise Exception({"reason": "Invalid opcode", "code": 404})
 
 
 async def ai(websocket):
     async for message in websocket:
-        sia = Sia().set_content(bytearray(message))
-        opcode = sia.read_uint16()
-        uuid = sia.read_byte_array_n(16)
+        sia = Sia().set_content(message)
+
+        uuid = sia.read_byte_array8()
+        signature = sia.read_byte_array8()
+        txHash = sia.read_string8()
+        method = sia.read_string8()
 
         try:
-            response = await handle_ai(uuid, opcode, sia)
+            response = await handle_ai(uuid, method, sia)
         except Exception as e:
             if isinstance(e.args[0], dict) and "code" in e.args[0] and isinstance(e.args[0]["code"], int):
                 response = makeError(uuid, e.args[0]["code"])

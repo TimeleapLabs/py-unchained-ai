@@ -28,7 +28,7 @@ NON_FREE_MODELS = [
     "UnfilteredAI/NSFW-gen-v2.1",
 ]
 
-ALLOWED_MODELS = ["black-forest-labs/FLUX.1-schnell"]
+ALLOWED_MODELS = ["segmind/SSD-1B"]
 MAX_ALLOWED_STEPS = 32
 
 
@@ -44,6 +44,10 @@ def get_pipeline(model_name, lora_weights=None):
 
         pipelines[key].to(get_device())
 
+        # if flux and macos # TODO: broken
+        if model_name == "black-forest-labs/FLUX.1-schnell" and get_device() == torch.device("mps"):
+            pipelines[key].to(torch.float32)
+
         pipelines[key].safety_checker = lambda images, **kwargs: (
             images, [False] * len(images))
 
@@ -57,12 +61,12 @@ def image_to_bytes(image):
 
 
 def parse_packet(packet: Sia):
+    prompt = packet.read_string16()
+    negative_prompt = packet.read_string16()
     model = packet.read_string8()
     lora_weights = packet.read_string8()
     steps = packet.read_uint8()
     # get prompt length from packet (little endian uint16 at offset 17)
-    prompt = packet.read_string16()
-    negative_prompt = packet.read_string16()
     return {
         "prompt": prompt,
         "model": model,
@@ -73,7 +77,16 @@ def parse_packet(packet: Sia):
 
 
 def pack_response_packet(uuid: bytearray, response: bytes):
-    return Sia().add_byte_array_n(uuid).add_uint64(0).add_byte_array32(response).content
+    return Sia().add_byte_array8(uuid).add_uint64(0).add_byte_array32(response).content
+
+
+def extra_options(parsed: dict):
+    if parsed["model"] != "black-forest-labs/FLUX.1-schnell":
+        return {
+            "lcm_origin_steps": 50,
+            "negative_prompt": parsed["negative_prompt"],
+        }
+    return {}
 
 
 def request_handler(uuid: bytearray, packet: Sia):
@@ -91,12 +104,12 @@ def request_handler(uuid: bytearray, packet: Sia):
         prompt=parsed["prompt"],
         num_inference_steps=parsed["steps"],
         guidance_scale=5.0,
-        lcm_origin_steps=50,
         height=1024,
         width=1024,
-        negative_prompt=parsed["negative_prompt"],
         num_images_per_prompt=1,
-        output_type="pil").images
+        output_type="pil",
+        **extra_options(parsed)
+    ).images
 
     response = image_to_bytes(images[0])
     return pack_response_packet(uuid, response)

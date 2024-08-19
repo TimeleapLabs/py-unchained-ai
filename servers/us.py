@@ -10,14 +10,14 @@ from handlers.gen import request_handler as gen
 
 
 def makeError(uuid, code):
-    return Sia().add_byte_array_n(uuid).add_uint64(code).content
+    return Sia().add_byte_array8(uuid).add_uint64(code).add_byte_array32([]).content
 
 
-async def handle_ai(uuid, opcode, sia):
-    if opcode == 0:
-        return gen.request_handler(uuid, sia)
-    elif opcode == 1:
-        return translate.request_handler(uuid, sia)
+async def handle_ai(uuid, method, sia):
+    if method == "Unchained.AI.TextToImage":
+        return gen(uuid, sia)
+    elif method == "Unchained.AI.Translate":
+        return translate(uuid, sia)
     else:
         raise Exception({"reason": "Invalid opcode", "code": 404})
 
@@ -28,26 +28,48 @@ async def ai(reader, writer):
 
     try:
         data = bytearray()
+        size = 0
         while True:
-            chunk = await reader.read(100)
+            chunk = await reader.read(size == 0 and 100 or size)
             if not chunk:
                 break
+
             data.extend(chunk)
 
-        sia = Sia().set_content(data)
-        opcode = sia.read_uint16()
-        uuid = sia.read_byte_array_n(16)
+            if size == 0 and len(data) >= 4:
+                size = int.from_bytes(data[:4], byteorder="little")
+                print(f"Expecting {size} bytes")
+
+            if size > 0 and len(data) >= size + 4:
+                break
+
+        print(f"Received {len(data)} bytes from {peername}")
+
+        sia = Sia().set_content(data[4:])
+
+        uuid = sia.read_byte_array8()
+        signature = sia.read_byte_array8()
+        txHash = sia.read_string8()
+        method = sia.read_string8()
 
         try:
-            response = await handle_ai(uuid, opcode, sia)
+            response = await handle_ai(uuid, method, sia)
 
         except Exception as e:
+            print(f"Error: {e}")
+
             if isinstance(e.args[0], dict) and "code" in e.args[0] and isinstance(e.args[0]["code"], int):
                 response = makeError(uuid, e.args[0]["code"])
             else:
                 response = makeError(uuid, 500)
 
-        writer.write(response)
+        payload = bytearray()
+        payload.extend(len(response).to_bytes(4, byteorder="little"))
+        payload.extend(response)
+
+        print(f"Sending {len(payload)} bytes to {peername}")
+
+        writer.write(payload)
         await writer.drain()
 
     except asyncio.CancelledError:
