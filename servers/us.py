@@ -27,50 +27,51 @@ async def ai(reader, writer):
     print(f"Connection from {peername}")
 
     try:
-        data = bytearray()
-        size = 0
         while True:
-            chunk = await reader.read(size == 0 and 100 or size)
-            if not chunk:
-                break
+            data = bytearray()
+            size = 0
+            while True:
+                chunk = await reader.read(size == 0 and 100 or size)
+                if not chunk:
+                    break
 
-            data.extend(chunk)
+                data.extend(chunk)
 
-            if size == 0 and len(data) >= 4:
-                size = int.from_bytes(data[:4], byteorder="little")
-                print(f"Expecting {size} bytes")
+                if size == 0 and len(data) >= 4:
+                    size = int.from_bytes(data[:4], byteorder="little")
+                    print(f"Expecting {size} bytes")
 
-            if size > 0 and len(data) >= size + 4:
-                break
+                if size > 0 and len(data) >= size + 4:
+                    break
 
-        print(f"Received {len(data)} bytes from {peername}")
+            print(f"Received {len(data)} bytes from {peername}")
 
-        sia = Sia().set_content(data[4:])
+            sia = Sia().set_content(data[4:])
 
-        uuid = sia.read_byte_array8()
-        signature = sia.read_byte_array8()
-        txHash = sia.read_string8()
-        method = sia.read_string8()
+            uuid = sia.read_byte_array8()
+            signature_ = sia.read_byte_array8()
+            txHash_ = sia.read_string8()
+            method = sia.read_string8()
 
-        try:
-            response = await handle_ai(uuid, method, sia)
+            try:
+                response = await handle_ai(uuid, method, sia)
 
-        except Exception as e:
-            print(f"Error: {e}")
+            except Exception as e:
+                print(f"Error: {e}")
 
-            if isinstance(e.args[0], dict) and "code" in e.args[0] and isinstance(e.args[0]["code"], int):
-                response = makeError(uuid, e.args[0]["code"])
-            else:
-                response = makeError(uuid, 500)
+                if isinstance(e.args[0], dict) and "code" in e.args[0] and isinstance(e.args[0]["code"], int):
+                    response = makeError(uuid, e.args[0]["code"])
+                else:
+                    response = makeError(uuid, 500)
 
-        payload = bytearray()
-        payload.extend(len(response).to_bytes(4, byteorder="little"))
-        payload.extend(response)
+            payload = bytearray()
+            payload.extend(len(response).to_bytes(4, byteorder="little"))
+            payload.extend(response)
 
-        print(f"Sending {len(payload)} bytes to {peername}")
+            print(f"Sending {len(payload)} bytes to {peername}")
 
-        writer.write(payload)
-        await writer.drain()
+            writer.write(payload)
+            await writer.drain()
 
     except asyncio.CancelledError:
         print(f"Connection to {peername} cancelled")
