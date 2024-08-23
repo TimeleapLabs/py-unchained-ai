@@ -48,5 +48,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/timeleaplabs/unchained:${{ steps.docker-tag.outputs.docker-tag }}
-            ghcr.io/timeleaplabs/unchained:${{ github.ref_name }}
+            ghcr.io/timeleaplabs/py-unchained-ai:${{ steps.docker-tag.outputs.docker-tag }}
+            ghcr.io/timeleaplabs/py-unchained-ai:${{ github.ref_name }}
