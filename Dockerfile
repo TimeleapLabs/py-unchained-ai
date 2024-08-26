@@ -4,7 +4,8 @@ FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 # Set shell options for better error handling
 SHELL ["/bin/bash", "-xe", "-o", "pipefail", "-c"]
 
-# Environment variables for Conda and Miniforge
+# Environment variables for Python, Conda and Miniforge
+ENV PYTHON_VERSION=3.8.19
 ENV CONDA_DIR=/opt/conda
 ENV PATH=$CONDA_DIR/bin:$PATH
 ENV MINIFORGE3_VERSION=24.3.0-0
@@ -33,8 +34,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get remove -y --purge curl && \
     apt-get autoremove -y --purge
 
-# Create a Conda environment with Python 3.8.19
-RUN mamba create -n unchained python=3.8.19 -y && \
+# Create a Conda environment with PYTHON_VERSION
+RUN mamba create -n unchained python=${PYTHON_VERSION} -y && \
     mamba clean -afy
 
 # Activate the environment and install dependencies from requirements.txt
