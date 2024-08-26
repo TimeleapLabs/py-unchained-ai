@@ -42,8 +42,6 @@ RUN mamba create -n unchained python=${PYTHON_VERSION} -y && \
 COPY requirements.txt /app
 RUN /bin/bash -c "source activate unchained && pip install --no-cache-dir -r requirements.txt && mamba clean -afy && rm requirements.txt"
 
-# Set the environment to activate by default when the container starts
-SHELL ["conda", "run", "-n", "unchained", "/bin/bash", "-c"]
+# Set the entrypoint to start the main.py script, activating the environment first
+CMD ["/bin/bash", "-c", "source activate unchained && python src/main.py us --file /app/data/unchained.sock"]
 
-# Set the entrypoint to start the main.py script
-CMD ["python", "src/main.py", "us", "--file", "/app/data/unchained.sock"]
