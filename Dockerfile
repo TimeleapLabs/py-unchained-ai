@@ -2,6 +2,10 @@
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 SHELL ["/bin/bash", "-xe", "-o", "pipefail", "-c"]
 
+ENV CONDA_DIR=/opt/conda
+ENV PATH=/opt/conda/bin:$PATH
+ENV MINIFORGE3_VERSION=24.3.0-0
+
 # Set the working directory inside the container
 WORKDIR /app
 
@@ -11,16 +15,17 @@ COPY src /app/src
 ARG DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/curl,sharing=locked \
     apt-get update -qy && \
     apt-get install --no-install-recommends -qy curl && \
-    curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-$(uname -m).sh -o Mambaforge.sh && \
-    bash Mambaforge.sh -b -p /opt/conda && \
-    rm Mambaforge.sh && \
+    pushd /var/cache/curl && \
+    curl -sSL -C - -O "https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE3_VERSION}/Miniforge3-${MINIFORGE3_VERSION}-$(uname)-$(uname -m).sh" && \
+    bash Miniforge3-${MINIFORGE3_VERSION}-$(uname)-$(uname -m).sh -b -p "${CONDA_DIR}" && \
+    conda clean --tarballs --index-cache --packages --yes && \
+    find ${CONDA_DIR} -follow -type f -name '*.a' -delete && \
+    find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete && \
     apt-get remove -y --purge curl && \
     apt-get autoremove -y --purge
-
-# Update PATH
-ENV PATH=/opt/conda/bin:$PATH
 
 # Install Python 3.8.19 using mamba
 RUN mamba create -n unchained python=3.8.19 -y \
