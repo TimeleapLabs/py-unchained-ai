@@ -44,3 +44,4 @@ RUN /bin/bash -c "source activate unchained && pip install --no-cache-dir -r req
 
 # Set the entrypoint to start the main.py script, activating the environment first
 CMD ["/bin/bash", "-c", "source activate unchained && python src/main.py us --file /app/data/unchained.sock"]
+
