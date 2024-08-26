@@ -1,9 +1,12 @@
-# Use the official Python 3.8 image as the base image
+# Use the NVIDIA CUDA image as the base image
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Set shell options for better error handling
 SHELL ["/bin/bash", "-xe", "-o", "pipefail", "-c"]
 
+# Environment variables for Conda and Miniforge
 ENV CONDA_DIR=/opt/conda
-ENV PATH=/opt/conda/bin:$PATH
+ENV PATH=$CONDA_DIR/bin:$PATH
 ENV MINIFORGE3_VERSION=24.3.0-0
 
 # Set the working directory inside the container
@@ -12,7 +15,10 @@ WORKDIR /app
 # Copy the source code into the container
 COPY src /app/src
 
+# ARG to suppress interaction during package installation
 ARG DEBIAN_FRONTEND=noninteractive
+
+# Install curl and Miniforge, clean up unnecessary files afterward
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     --mount=type=cache,target=/var/cache/curl,sharing=locked \
@@ -27,11 +33,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get remove -y --purge curl && \
     apt-get autoremove -y --purge
 
-# Install Python 3.8.19 using mamba
-RUN mamba create -n unchained python=3.8.19 -y \
-    && mamba clean -afy
+# Create a Conda environment with Python 3.8.19
+RUN mamba create -n unchained python=3.8.19 -y && \
+    mamba clean -afy
 
-# Activate the environment and install Python packages from requirements.txt
+# Activate the environment and install dependencies from requirements.txt
 COPY requirements.txt /app
 RUN /bin/bash -c "source activate unchained && pip install --no-cache-dir -r requirements.txt && mamba clean -afy && rm requirements.txt"
 
